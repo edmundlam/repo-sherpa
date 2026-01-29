@@ -64,6 +64,17 @@ class MultiRepoBot:
 
             logger.info(f"[{bot_name}] Request received - channel: {channel}, thread: {thread_ts}")
 
+            # Add reaction to indicate we're working on it
+            try:
+                client.reactions_add(
+                    channel=channel,
+                    timestamp=event['ts'],
+                    name='hourglass_flowing_sand'
+                )
+                logger.debug(f"[{bot_name}] Added hourglass reaction to {event['ts']}")
+            except Exception as e:
+                logger.warning(f"[{bot_name}] Failed to add reaction: {e}")
+
             # Submit job to executor for async processing
             self.executor.submit(self.process_request, bot_name, event, say, client)
 
@@ -169,6 +180,17 @@ class MultiRepoBot:
                 text=output['result'],
                 thread_ts=thread_ts
             )
+
+            # Remove the hourglass reaction
+            try:
+                self.apps[bot_name]['app'].client.reactions_remove(
+                    channel=channel,
+                    timestamp=event['ts'],
+                    name='hourglass_flowing_sand'
+                )
+                logger.debug(f"[{bot_name}] Removed hourglass reaction from {event['ts']}")
+            except Exception as e:
+                logger.warning(f"[{bot_name}] Failed to remove reaction: {e}")
 
         except subprocess.TimeoutExpired:
             logger.error(f"[{bot_name}] Request timed out after {config['timeout']}s")
