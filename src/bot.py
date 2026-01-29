@@ -5,6 +5,7 @@ import subprocess
 import json
 import logging
 import time
+import random
 from concurrent.futures import ThreadPoolExecutor
 from slack_bolt import App
 from slack_bolt.adapter.socket_mode import SocketModeHandler
@@ -64,19 +65,22 @@ class MultiRepoBot:
 
             logger.info(f"[{bot_name}] Request received - channel: {channel}, thread: {thread_ts}")
 
-            # Add reaction to indicate we're working on it
+            # Randomly select and add one reaction to indicate we're working on it
+            emojis = bot_config.get('processing_emojis', ['hourglass_flowing_sand'])
+            selected_emoji = random.choice(emojis)
+
             try:
                 client.reactions_add(
                     channel=channel,
                     timestamp=event['ts'],
-                    name='hourglass_flowing_sand'
+                    name=selected_emoji
                 )
-                logger.debug(f"[{bot_name}] Added hourglass reaction to {event['ts']}")
+                logger.debug(f"[{bot_name}] Added {selected_emoji} reaction to {event['ts']}")
             except Exception as e:
-                logger.warning(f"[{bot_name}] Failed to add reaction: {e}")
+                logger.warning(f"[{bot_name}] Failed to add {selected_emoji} reaction: {e}")
 
             # Submit job to executor for async processing
-            self.executor.submit(self.process_request, bot_name, event, say, client)
+            self.executor.submit(self.process_request, bot_name, event, say, client, selected_emoji)
 
         return handler
 
@@ -113,7 +117,7 @@ class MultiRepoBot:
 
         return context
 
-    def process_request(self, bot_name, event, say, client):
+    def process_request(self, bot_name, event, say, client, emoji):
         """Process a Slack mention and respond using Claude Code"""
         config = self.apps[bot_name]['config']
         thread_ts = event.get('thread_ts') or event['ts']
@@ -181,16 +185,16 @@ class MultiRepoBot:
                 thread_ts=thread_ts
             )
 
-            # Remove the hourglass reaction
+            # Remove the processing reaction
             try:
                 self.apps[bot_name]['app'].client.reactions_remove(
                     channel=channel,
                     timestamp=event['ts'],
-                    name='hourglass_flowing_sand'
+                    name=emoji
                 )
-                logger.debug(f"[{bot_name}] Removed hourglass reaction from {event['ts']}")
+                logger.debug(f"[{bot_name}] Removed {emoji} reaction from {event['ts']}")
             except Exception as e:
-                logger.warning(f"[{bot_name}] Failed to remove reaction: {e}")
+                logger.warning(f"[{bot_name}] Failed to remove {emoji} reaction: {e}")
 
         except subprocess.TimeoutExpired:
             logger.error(f"[{bot_name}] Request timed out after {config['timeout']}s")

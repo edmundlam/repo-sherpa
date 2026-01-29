@@ -10,12 +10,22 @@ bots:
     repo_path: "/path/to/your/backend/repo"
     # Timeout in seconds for subprocess execution
     timeout: 300
+    # List of emoji reactions to randomly choose from when processing (optional)
+    processing_emojis:
+      - hourglass_flowing_sand
+      - eyes
+      - robot_face
 
   frontend_bot:
     repo_path: "/path/to/your/frontend/repo"
     timeout: 180
+    processing_emojis:
+      - wave
+      - thumbsup
 
 # You can add more bots by following the same pattern:
 # another_bot:
 #   repo_path: "/path/to/another/repo"
 #   timeout: 240
+#   processing_emojis:
+#     - your_custom_emoji
