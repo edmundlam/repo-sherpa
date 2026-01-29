@@ -10,6 +10,20 @@ bots:
     repo_path: "/path/to/your/backend/repo"
     # Timeout in seconds for subprocess execution
     timeout: 300
+    # Maximum number of Claude turns (prevents infinite loops, default: 40)
+    max_turns: 40
+    # Allowed tools for Claude Code CLI (optional, empty = use Claude's defaults)
+    # Built-in tools (always available): Read, Grep, Ls, Find
+    # Add Bash commands for git exploration, file reading, etc.
+    allowed_tools:
+      - Read
+      - Grep
+      - Ls
+      - Find
+      - "Bash(git log)"
+      - "Bash(git show)"
+      - "Bash(git diff)"
+      - "Bash(git blame)"
     # List of emoji reactions to randomly choose from when processing (optional)
     processing_emojis:
       - hourglass_flowing_sand
@@ -19,6 +33,16 @@ bots:
   frontend_bot:
     repo_path: "/path/to/your/frontend/repo"
     timeout: 180
+    max_turns: 40
+    allowed_tools:
+      - Read
+      - Grep
+      - Ls
+      - Find
+      - "Bash(git log)"
+      - "Bash(git show)"
+      - "Bash(git diff)"
+      - "Bash(git blame)"
     processing_emojis:
       - wave
       - thumbsup
@@ -27,5 +51,6 @@ bots:
 # another_bot:
 #   repo_path: "/path/to/another/repo"
 #   timeout: 240
+#   max_turns: 40
 #   processing_emojis:
 #     - your_custom_emoji

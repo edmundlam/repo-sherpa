@@ -132,10 +132,28 @@ bots:
   bot_name:
     repo_path: "/absolute/path/to/repository"  # Required: Path to git repo
     timeout: 300                               # Optional: Timeout in seconds (default: 300)
+    max_turns: 40                              # Optional: Max Claude turns (default: 40)
+    allowed_tools:                             # Optional: Tools for Claude (empty = defaults)
+      - Read
+      - Grep
+      - Ls
+      - Find
+      - "Bash(git log)"
+      - "Bash(git show)"
+      - "Bash(git diff)"
+      - "Bash(git blame)"
     processing_emojis:                         # Optional: List of emoji reactions
       - eyes
       - robot_face
 ```
+
+**Configuration Options:**
+
+- `repo_path`: Absolute path to the git repository the bot will serve
+- `timeout`: Maximum seconds to wait for Claude CLI response (default: 300)
+- `max_turns`: Maximum number of Claude turns before timing out (default: 40)
+- `allowed_tools`: List of tools Claude Code can use. Built-in tools (Read, Grep, Ls, Find) are always available. Add `Bash(...)` entries to allow git commands and other utilities
+- `processing_emojis`: Emoji reactions randomly selected for visual feedback
 
 ### Environment Variables
 

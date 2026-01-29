@@ -255,10 +255,28 @@ bots:
   backend:
     repo_path: "/absolute/path/to/repo"  # Git repository path
     timeout: 300                         # Request timeout (seconds)
+    max_turns: 40                        # Max Claude turns (default: 40)
+    allowed_tools:                       # Tools Claude can use
+      - Read
+      - Grep
+      - Ls
+      - Find
+      - "Bash(git log)"
+      - "Bash(git show)"
+      - "Bash(git diff)"
+      - "Bash(git blame)"
     processing_emojis:                   # Visual feedback options
       - eyes
       - robot_face
 ```
+
+**Configuration Options:**
+
+- `repo_path`: Absolute path to the git repository
+- `timeout`: Maximum seconds to wait for Claude CLI response
+- `max_turns`: Maximum number of Claude turns before timeout (prevents runaway loops)
+- `allowed_tools`: Optional list of tools for Claude Code. Built-in tools (Read, Grep, Ls, Find) are always available. Add `Bash(...)` entries to allow git commands and other utilities for richer repository exploration
+- `processing_emojis`: List of emoji reactions for visual feedback (one randomly selected per request)
 
 ### Environment Variables
 

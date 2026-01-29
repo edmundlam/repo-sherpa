@@ -147,6 +147,16 @@ class MultiRepoBot:
 
             # Build Claude Code command
             cmd = ['claude', '-p', prompt, '--output-format', 'json']
+
+            # Add max-turns if configured
+            max_turns = config.get('max_turns', 40)
+            cmd.extend(['--max-turns', str(max_turns)])
+
+            # Add allowed tools if configured
+            allowed_tools = config.get('allowed_tools', [])
+            if allowed_tools:
+                cmd.extend(['--allowed-tools', ','.join(allowed_tools)])
+
             if session_id:
                 cmd.extend(['--resume', session_id])
 

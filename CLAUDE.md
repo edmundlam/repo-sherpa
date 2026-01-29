@@ -89,7 +89,7 @@ The system maintains Claude Code session IDs per Slack thread, enabling multi-tu
 
 ### Configuration Files
 
-- **`bot_config.yaml`**: Bot definitions, repository paths, timeouts, emoji reactions
+- **`bot_config.yaml`**: Bot definitions, repository paths, timeouts, max_turns, allowed_tools, emoji reactions
 - **`.env`**: Slack tokens (gitignored, see `.env.example` for template)
 - **`docs/setup.md`**: Complete Slack app setup instructions
 
