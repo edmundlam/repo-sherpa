@@ -2,6 +2,7 @@ import os
 import yaml
 import threading
 import subprocess
+import json
 from concurrent.futures import ThreadPoolExecutor
 from slack_bolt import App
 from slack_bolt.adapter.socket_mode import SocketModeHandler
@@ -15,6 +16,7 @@ class MultiRepoBot:
         self.executor = ThreadPoolExecutor(max_workers=10)
         self.apps = {}
         self.handlers = {}
+        self.thread_sessions = {}  # Maps thread_ts -> Claude session_id
         self._setup_bots()
 
     def _setup_bots(self):
@@ -67,43 +69,84 @@ class MultiRepoBot:
             print(f"Error fetching thread context: {e}")
             return []
 
+    def format_prompt(self, messages, repo_path):
+        """Format Slack thread history into a prompt for Claude"""
+        if len(messages) == 1:
+            # First message in thread - just return the question
+            return messages[0]['text']
+
+        # Build context from thread history
+        context = "Previous conversation:\n"
+        for msg in messages[:-1]:
+            role = "Assistant" if msg.get('bot_id') else "User"
+            context += f"{role}: {msg['text']}\n"
+
+        # Add current question
+        current_question = messages[-1]['text']
+        context += f"\nCurrent question: {current_question}\n"
+        context += f"\nYou are working in the repository at: {repo_path}"
+
+        return context
+
     def process_request(self, bot_name, event, say, client):
-        """Process a bot mention request"""
+        """Process a Slack mention and respond using Claude Code"""
         config = self.apps[bot_name]['config']
         thread_ts = event.get('thread_ts') or event['ts']
         channel = event['channel']
 
         try:
-            # Fetch thread context
+            # Fetch thread context from Slack
             messages = self.fetch_thread_context(
                 self.apps[bot_name]['app'],
                 channel,
                 thread_ts
             )
 
-            # Run echo subprocess
+            # Format prompt from thread history
+            prompt = self.format_prompt(messages, config['repo_path'])
+
+            # Check if we have an existing session for this thread
+            session_id = self.thread_sessions.get(thread_ts)
+
+            # Build Claude Code command
+            cmd = ['claude', '-p', prompt, '--output-format', 'json']
+            if session_id:
+                cmd.extend(['--resume', session_id])
+
+            # Run Claude Code
             result = subprocess.run(
-                ['echo', f"Repo: {config['repo_path']}, Messages: {len(messages)}"],
+                cmd,
                 cwd=config['repo_path'],
                 capture_output=True,
                 text=True,
                 timeout=config['timeout']
             )
 
-            # Post response
+            # Parse JSON response
+            output = json.loads(result.stdout)
+
+            # Store session_id for future turns in this thread
+            self.thread_sessions[thread_ts] = output['session_id']
+
+            # Post response to Slack thread
             say(
-                text=result.stdout.strip(),
+                text=output['result'],
                 thread_ts=thread_ts
             )
 
         except subprocess.TimeoutExpired:
             say(
-                text=f"Error: Request timed out after {config['timeout']} seconds",
+                text="Request timed out - the task took too long to complete.",
+                thread_ts=thread_ts
+            )
+        except json.JSONDecodeError as e:
+            say(
+                text=f"Error parsing Claude response: {str(e)}",
                 thread_ts=thread_ts
             )
         except Exception as e:
             say(
-                text=f"Error: {str(e)}",
+                text=f"Error processing request: {str(e)}",
                 thread_ts=thread_ts
             )
 
