@@ -135,6 +135,7 @@ class MultiRepoBot:
             )
 
             # Format prompt from thread history
+            logger.info(f"[{bot_name}] Building prompt... message = {messages[-1]['text'][:50]}...")
             prompt = self.format_prompt(messages, config['repo_path'])
 
             # Check if we have an existing session for this thread
@@ -189,10 +190,19 @@ class MultiRepoBot:
                 f"Session: {output['session_id'][:8]}..."
             )
 
-            # Post response to Slack thread
+            # Post response to Slack thread with mrkdwn formatting
             say(
                 text=output['result'],
-                thread_ts=thread_ts
+                thread_ts=thread_ts,
+                blocks=[
+                    {
+                        "type": "section",
+                        "text": {
+                            "type": "mrkdwn",
+                            "text": output['result']
+                        }
+                    }
+                ]
             )
 
             # Remove the processing reaction
@@ -208,21 +218,27 @@ class MultiRepoBot:
 
         except subprocess.TimeoutExpired:
             logger.error(f"[{bot_name}] Request timed out after {config['timeout']}s")
+            error_msg = "Request timed out - the task took too long to complete."
             say(
-                text="Request timed out - the task took too long to complete.",
-                thread_ts=thread_ts
+                text=error_msg,
+                thread_ts=thread_ts,
+                blocks=[{"type": "section", "text": {"type": "mrkdwn", "text": error_msg}}]
             )
         except json.JSONDecodeError as e:
             logger.error(f"[{bot_name}] JSON decode error: {e}")
+            error_msg = f"Error parsing Claude response: {str(e)}"
             say(
-                text=f"Error parsing Claude response: {str(e)}",
-                thread_ts=thread_ts
+                text=error_msg,
+                thread_ts=thread_ts,
+                blocks=[{"type": "section", "text": {"type": "mrkdwn", "text": error_msg}}]
             )
         except Exception as e:
             logger.error(f"[{bot_name}] Unexpected error: {e}", exc_info=True)
+            error_msg = f"Error processing request: {str(e)}"
             say(
-                text=f"Error processing request: {str(e)}",
-                thread_ts=thread_ts
+                text=error_msg,
+                thread_ts=thread_ts,
+                blocks=[{"type": "section", "text": {"type": "mrkdwn", "text": error_msg}}]
             )
 
     def start(self):
