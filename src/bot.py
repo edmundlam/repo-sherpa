@@ -3,10 +3,20 @@ import yaml
 import threading
 import subprocess
 import json
+import logging
+import time
 from concurrent.futures import ThreadPoolExecutor
 from slack_bolt import App
 from slack_bolt.adapter.socket_mode import SocketModeHandler
 from dotenv import load_dotenv
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S'
+)
+logger = logging.getLogger(__name__)
 
 
 class MultiRepoBot:
@@ -30,7 +40,7 @@ class MultiRepoBot:
             app_token = os.getenv(app_token_key)
 
             if not bot_token or not app_token:
-                print(f"Warning: Missing tokens for {bot_name}, skipping...")
+                logger.warning(f"Missing tokens for {bot_name}, skipping...")
                 continue
 
             # Create Slack App instance
@@ -44,13 +54,15 @@ class MultiRepoBot:
                 'config': bot_config
             }
 
-            print(f"Configured bot: {bot_name}")
+            logger.info(f"Configured bot: {bot_name} (repo: {bot_config['repo_path']})")
 
     def _make_app_mention_handler(self, bot_name, bot_config):
         """Create a handler closure with bot_name and bot_config in scope"""
         def handler(event, say, client):
-            # Extract thread_ts (use event['ts'] if no thread exists)
             thread_ts = event.get('thread_ts') or event['ts']
+            channel = event.get('channel')
+
+            logger.info(f"[{bot_name}] Request received - channel: {channel}, thread: {thread_ts}")
 
             # Submit job to executor for async processing
             self.executor.submit(self.process_request, bot_name, event, say, client)
@@ -64,9 +76,11 @@ class MultiRepoBot:
                 channel=channel,
                 ts=thread_ts
             )
-            return result['messages']
+            messages = result['messages']
+            logger.debug(f"Fetched {len(messages)} messages from thread {thread_ts}")
+            return messages
         except Exception as e:
-            print(f"Error fetching thread context: {e}")
+            logger.error(f"Error fetching thread context: {e}")
             return []
 
     def format_prompt(self, messages, repo_path):
@@ -93,6 +107,9 @@ class MultiRepoBot:
         config = self.apps[bot_name]['config']
         thread_ts = event.get('thread_ts') or event['ts']
         channel = event['channel']
+        start_time = time.time()
+
+        logger.info(f"[{bot_name}] Processing request - thread: {thread_ts}")
 
         try:
             # Fetch thread context from Slack
@@ -108,12 +125,18 @@ class MultiRepoBot:
             # Check if we have an existing session for this thread
             session_id = self.thread_sessions.get(thread_ts)
 
+            if session_id:
+                logger.info(f"[{bot_name}] Resuming session {session_id[:8]}...")
+            else:
+                logger.info(f"[{bot_name}] Starting new session")
+
             # Build Claude Code command
             cmd = ['claude', '-p', prompt, '--output-format', 'json']
             if session_id:
                 cmd.extend(['--resume', session_id])
 
             # Run Claude Code
+            claude_start = time.time()
             result = subprocess.run(
                 cmd,
                 cwd=config['repo_path'],
@@ -121,12 +144,25 @@ class MultiRepoBot:
                 text=True,
                 timeout=config['timeout']
             )
+            claude_duration = time.time() - claude_start
 
             # Parse JSON response
             output = json.loads(result.stdout)
 
             # Store session_id for future turns in this thread
             self.thread_sessions[thread_ts] = output['session_id']
+
+            # Calculate response length for logging
+            response_length = len(output['result'])
+            total_duration = time.time() - start_time
+
+            logger.info(
+                f"[{bot_name}] Response sent - "
+                f"Claude: {claude_duration:.2f}s, "
+                f"Total: {total_duration:.2f}s, "
+                f"Chars: {response_length}, "
+                f"Session: {output['session_id'][:8]}..."
+            )
 
             # Post response to Slack thread
             say(
@@ -135,16 +171,19 @@ class MultiRepoBot:
             )
 
         except subprocess.TimeoutExpired:
+            logger.error(f"[{bot_name}] Request timed out after {config['timeout']}s")
             say(
                 text="Request timed out - the task took too long to complete.",
                 thread_ts=thread_ts
             )
         except json.JSONDecodeError as e:
+            logger.error(f"[{bot_name}] JSON decode error: {e}")
             say(
                 text=f"Error parsing Claude response: {str(e)}",
                 thread_ts=thread_ts
             )
         except Exception as e:
+            logger.error(f"[{bot_name}] Unexpected error: {e}", exc_info=True)
             say(
                 text=f"Error processing request: {str(e)}",
                 thread_ts=thread_ts
@@ -163,11 +202,14 @@ class MultiRepoBot:
             thread = threading.Thread(target=handler.start, daemon=True)
             thread.start()
             threads.append(thread)
-            print(f"Started handler for: {bot_name}")
+            logger.info(f"Started handler for: {bot_name}")
+
+        logger.info("All bots started, listening for mentions...")
 
         # Keep main thread alive
         try:
             for thread in threads:
                 thread.join()
         except KeyboardInterrupt:
-            print("\nShutting down...")
+            logger.info("Shutting down...")
+            logger.info(f"Active sessions: {len(self.thread_sessions)}")
