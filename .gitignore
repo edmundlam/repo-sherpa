@@ -138,6 +138,9 @@ celerybeat.pid
 .env
 .envrc
 .venv
+
+# Bot configuration (user-specific)
+bot_config.yaml
 env/
 venv/
 ENV/

@@ -1,0 +1,21 @@
+# Bot Configuration Example
+# Copy this file to bot_config.yaml and update with your repository paths
+
+bots:
+  # Bot name - will be used to find environment variables:
+  # - <BOT_NAME>_BOT_TOKEN (e.g., BACKEND_BOT_TOKEN)
+  # - <BOT_NAME>_APP_TOKEN (e.g., BACKEND_APP_TOKEN)
+  backend_bot:
+    # Absolute or relative path to the git repository
+    repo_path: "/path/to/your/backend/repo"
+    # Timeout in seconds for subprocess execution
+    timeout: 300
+
+  frontend_bot:
+    repo_path: "/path/to/your/frontend/repo"
+    timeout: 180
+
+# You can add more bots by following the same pattern:
+# another_bot:
+#   repo_path: "/path/to/another/repo"
+#   timeout: 240
