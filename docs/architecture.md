@@ -246,6 +246,118 @@ cd /path/to/repo && claude --json "user prompt here"
 cd /path/to/repo && claude --json --resume session-id "follow-up question"
 ```
 
+## Repository Organization Patterns
+
+### Optional `/repos` Structure
+
+repo-sherpa includes an optional multi-repo organization pattern:
+
+```mermaid
+graph TB
+    subgraph "repo-sherpa Project"
+        SRC[src/]
+        REPOS[repos/]
+        CONFIG[bot_config.yaml]
+
+        subgraph "repos/ contents"
+            CLAUDE_MD[CLAUDE.md ✓]
+            REPOS_MD[REPOS.md 📝]
+            REPO1[backend/]
+            REPO2[frontend/]
+        end
+    end
+
+    SRC --> Bots
+    REPOS --> Bots
+    CONFIG --> Bots
+
+    style CLAUDE_MD fill:#90EE90
+    style REPOS_MD fill:#FFD700
+    style REPO1 fill:#FFB6C1
+    style REPO2 fill:#FFB6C1
+```
+
+**Structure:**
+
+```
+repo-sherpa/
+├── src/              # Bot source code
+├── repos/            # Optional: Served repositories
+│   ├── CLAUDE.md     # Tracked: Multi-repo context for Claude
+│   ├── REPOS.md      # Local: Repository catalog (gitignored)
+│   ├── backend/      # Git repo (gitignored)
+│   └── frontend/     # Git repo (gitignored)
+└── bot_config.yaml
+```
+
+**Benefits:**
+- Centralized repository management
+- Shared context across repos via `repos/CLAUDE.md`
+- Easy repo discovery via `repos/REPOS.md`
+- Clean separation between bot code and served content
+
+**Alternative:** Configure absolute paths to any location on your filesystem in `bot_config.yaml`.
+
+### repos/CLAUDE.md
+
+This file provides context when Claude operates across multiple repositories:
+
+- **Read-only enforcement**: Instructs Claude to never use Edit/Write tools
+- **Slack formatting**: Rules for Slack's mrkdwn format (single asterisks for bold, etc.)
+- **Multi-repo clarification**: Patterns for asking which repo a question refers to
+- **Repository discovery**: Instructions to check for repo-specific CLAUDE.md files
+- **Reference to REPOS.md**: Directs Claude to the repository catalog
+
+Example content:
+```markdown
+## Repository Discovery
+For a list of available repositories, see `REPOS.md` in this directory.
+
+## Multi-Repository Handling
+When a question could apply to multiple repositories:
+1. Ask for clarification - Don't assume which repo
+2. Clearly indicate which repository results are from
+3. Check for repo-specific CLAUDE.md files
+```
+
+### repos/REPOS.md (Local, Gitignored)
+
+A local catalog file that lists available repositories. Create this manually based on your needs—it's excluded from git via `.gitignore` to keep your repository structure private.
+
+**Why it's gitignored:** Repository paths are user-specific and shouldn't be committed to version control.
+
+**Example structure:**
+```markdown
+# Available Repositories
+
+## backend-service
+- **Path**: `/Users/you/repo-sherpa/repos/backend-service`
+- **Description**: Main backend API service
+- **Tech Stack**: Python, FastAPI, PostgreSQL
+- **Team**: Backend Team
+
+## frontend-app
+- **Path**: `/Users/you/repo-sherpa/repos/frontend-app`
+- **Description**: React frontend application
+- **Tech Stack**: React, TypeScript, Tailwind
+- **Team**: Frontend Team
+```
+
+See `repos/REPOS.md.example` for a template you can copy and customize.
+
+### Git Ignore Configuration
+
+The `.gitignore` file (lines 215-217) is configured to:
+```
+/repos/*       # Ignore all repos folder contents
+!/repos/CLAUDE.md  # Except the CLAUDE.md file
+```
+
+This allows:
+- ✅ Tracked `repos/CLAUDE.md` with multi-repo instructions
+- ❌ Ignored `repos/REPOS.md` with your local repo catalog
+- ❌ Ignored `repos/*/` actual git repositories
+
 ## Configuration Structure
 
 ### bot_config.yaml

@@ -212,6 +212,7 @@ __marimo__/
 # context folder
 context/
 
-# repos folder - ignore all contents except CLAUDE.md
+# repos folder - ignore all contents except CLAUDE.md and REPOS.md.example
 /repos/*
 !/repos/CLAUDE.md
+!/repos/REPOS.md.example

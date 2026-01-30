@@ -110,6 +110,16 @@ After completing the setup for all bots:
    ```
    You should see output indicating the bot is connecting via Socket Mode.
 
+> **💡 Optional: Use the `/repos` folder**
+>
+> While you can specify any absolute path for `repo_path` in your `bot_config.yaml`, repo-sherpa includes a recommended `/repos` folder structure:
+>
+> - Clone repositories into `repos/` subdirectory
+> - Create `repos/REPOS.md` to document available repos (see `repos/REPOS.md.example` for a template)
+> - Benefit from shared multi-repo context in `repos/CLAUDE.md`
+>
+> This is optional—use whatever folder structure works for your workflow! See [README.md - Repository Organization](../README.md#repository-organization-optional) for details.
+
 ## Troubleshooting
 
 ### Bot doesn't respond to mentions

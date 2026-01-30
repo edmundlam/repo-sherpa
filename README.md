@@ -93,6 +93,48 @@ repo-sherpa maintains session context per thread. Follow-up questions in the sam
 [Bot responds with specific code references, remembering the context]
 ```
 
+## Repository Organization (Optional)
+
+repo-sherpa supports a recommended `/repos` folder structure for organizing multiple repositories, though this is **entirely optional**.
+
+### Using the `/repos` Folder
+
+You can clone or symlink your target repositories into a `repos/` subdirectory:
+
+```bash
+mkdir repos
+cd repos
+git clone https://github.com/yourorg/backend-service.git
+git clone https://github.com/yourorg/frontend-app.git
+```
+
+Then create a `repos/REPOS.md` file to document available repositories:
+
+```markdown
+# Available Repositories
+
+## backend-service
+- **Path**: `/Users/you/repo-sherpa/repos/backend-service`
+- **Description**: Main backend API service
+- **Tech Stack**: Python, FastAPI, PostgreSQL
+
+## frontend-app
+- **Path**: `/Users/you/repo-sherpa/repos/frontend-app`
+- **Description**: React frontend application
+- **Tech Stack**: React, TypeScript, Tailwind
+```
+
+### Why Use It?
+
+- Clean separation between bot code and served repositories
+- Easy to add/remove repos without changing bot_config paths
+- Shared context file (`repos/CLAUDE.md`) for multi-repo guidance
+- Repository catalog (`repos/REPOS.md`) for discovery
+
+### Not Using It?
+
+No problem! Simply configure absolute paths in `bot_config.yaml` to wherever your repos live. The `/repos` folder is just a suggested organizational pattern.
+
 ## Architecture
 
 ```mermaid

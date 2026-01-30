@@ -1,0 +1,46 @@
+# REPOS.md Example
+
+**Copy this file to `repos/REPOS.md` and customize with your actual repositories.**
+
+This file helps Claude understand which repositories are available when operating in multi-repo mode. It serves as a catalog for repository discovery and context.
+
+---
+
+# Available Repositories
+
+## repository-name-here
+- **Path**: `/absolute/path/to/repo`
+- **Description**: Brief description of what this repository does
+- **Tech Stack**: Key technologies (e.g., Python, FastAPI, PostgreSQL)
+- **Team**: Team responsible for this repo (optional)
+- **Documentation**: Link to internal docs or README (optional)
+- **Notes**: Any additional context (optional)
+
+## another-repository
+- **Path**: `/absolute/path/to/another-repo`
+- **Description**: Another repository description
+- **Tech Stack**: Node.js, Express, MongoDB, Redis
+- **Team**: Platform Team
+- **Documentation**: https://docs.example.com/another-repo
+- **Notes**: Legacy system, scheduled for migration
+
+## microservice-api
+- **Path**: `/Users/username/repo-sherpa/repos/microservice-api`
+- **Description**: RESTful API microservice handling user authentication
+- **Tech Stack**: Go, gRPC, PostgreSQL
+- **Team**: Auth Squad
+- **Notes**: High-traffic service, requires careful testing
+
+---
+
+## Guidelines
+
+1. **Keep it updated**: Add new repositories as you onboard them to repo-sherpa
+2. **Be descriptive**: Help Claude understand what each repo does
+3. **Use absolute paths**: Ensure paths match what's in `bot_config.yaml`
+4. **Team context**: Including team names helps Claude route questions appropriately
+5. **Tech stack**: List key technologies to help Claude understand code patterns
+
+---
+
+**Note**: This file is gitignored (see `.gitignore` lines 215-217). Keep it updated as you add/remove repositories, but don't commit it to version control—repository paths are user-specific.
