@@ -1,4 +1,10 @@
 import os
+import sys
+from pathlib import Path
+
+# Add project root to path to resolve import conflicts
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
 import yaml
 import logging
 import random
@@ -7,11 +13,11 @@ from concurrent.futures import ThreadPoolExecutor
 
 from dotenv import load_dotenv
 
-from slack.app_manager import SlackAppManager
-from slack.messaging import SlackMessaging
-from claude.cli_wrapper import ClaudeCLIWrapper, ClaudeCLIError
-from claude.prompt_builder import PromptBuilder
-from sessions.manager import SessionManager
+from src.slack.app_manager import SlackAppManager
+from src.slack.messaging import SlackMessaging
+from src.claude.cli_wrapper import ClaudeCLIWrapper, ClaudeCLIError
+from src.claude.prompt_builder import PromptBuilder
+from src.sessions.manager import SessionManager
 
 
 # Configure logging
