@@ -102,17 +102,29 @@ class MultiRepoBot:
             # Fetch thread context from Slack
             messages = messaging.fetch_thread_context(channel, thread_ts)
 
-            # Format prompt from thread history
-            logger.info(f"[{bot_name}] Building prompt... message = {messages[-1]['text'][:50]}...")
-            prompt = PromptBuilder.build(messages, config["repo_path"])
+            # Get context settings from config
+            context_config = config.get("context", {})
+            max_history = context_config.get("max_history", 100)
 
-            # Check if we have an existing session for this thread
-            session_id = self.thread_sessions.get_session(thread_ts)
+            # Get session metadata for this thread
+            session_metadata = self.thread_sessions.get_session_metadata(thread_ts)
+            session_id = None
+            last_message_ts = None
 
-            if session_id:
-                logger.info(f"[{bot_name}] Resuming session {session_id[:8]}...")
+            if session_metadata:
+                session_id = session_metadata["session_id"]
+                last_message_ts = session_metadata.get("last_message_ts")
+                logger.info(
+                    f"[{bot_name}] Resuming session {session_id[:8]}... (last response: {last_message_ts or 'unknown'})"
+                )
             else:
                 logger.info(f"[{bot_name}] Starting new session")
+
+            # Format prompt from thread history with filtering
+            logger.info(f"[{bot_name}] Building prompt... message = {messages[-1]['text'][:50]}...")
+            prompt = PromptBuilder.build(
+                messages, config["repo_path"], last_message_ts=last_message_ts, max_history=max_history
+            )
 
             # Invoke Claude CLI
             claude_start = time.time()
@@ -125,8 +137,9 @@ class MultiRepoBot:
             output = claude.invoke(prompt, session_id)
             claude_duration = time.time() - claude_start
 
-            # Store session_id for future turns in this thread
-            self.thread_sessions.set_session(thread_ts, output["session_id"])
+            # Store session metadata for future turns in this thread
+            # Use the current message timestamp as our "last response" marker
+            self.thread_sessions.update_session(thread_ts, output["session_id"], event["ts"])
 
             # Calculate response length for logging
             response_length = len(output["result"])

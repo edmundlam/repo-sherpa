@@ -29,6 +29,12 @@ bots:
       - hourglass_flowing_sand
       - eyes
       - robot_face
+    # Context window settings (optional)
+    context:
+      # Max messages to include in prompt (default: 100)
+      # For new sessions: includes last N messages from thread
+      # For resumed sessions: includes last N messages since last bot response
+      max_history: 50
 
   frontend_bot:
     repo_path: "/path/to/your/frontend/repo"
@@ -46,6 +52,8 @@ bots:
     processing_emojis:
       - wave
       - thumbsup
+    context:
+      max_history: 50
 
 # You can add more bots by following the same pattern:
 # another_bot:
@@ -54,3 +62,5 @@ bots:
 #   max_turns: 40
 #   processing_emojis:
 #     - your_custom_emoji
+#   context:
+#     max_history: 50
