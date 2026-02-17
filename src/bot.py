@@ -165,7 +165,7 @@ class MultiRepoBot:
             error_msg = "Request timed out - the task took too long to complete."
             messaging.post_message(say, error_msg, thread_ts)
         except ClaudeCLIError as e:
-            logger.error(f"[{bot_name}] Claude CLI error: {e}")
+            logger.error(f"[{bot_name}] Claude CLI error: {e}", exc_info=True)
             error_msg = f"Error parsing Claude response: {str(e)}"
             messaging.post_message(say, error_msg, thread_ts)
         except Exception as e:

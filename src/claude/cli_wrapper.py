@@ -85,4 +85,16 @@ class ClaudeCLIWrapper:
             output = json.loads(result.stdout)
             return output
         except json.JSONDecodeError as e:
+            logger.error(
+                "Failed to parse Claude CLI response as JSON",
+                exc_info=True,
+                extra={
+                    "stdout": result.stdout,
+                    "stderr": result.stderr,
+                    "returncode": result.returncode
+                }
+            )
+            logger.error(f"STDOUT: {result.stdout}")
+            logger.error(f"STDERR: {result.stderr}")
+            logger.error(f"Return code: {result.returncode}")
             raise ClaudeCLIError(f"Failed to parse Claude response: {e}") from e
