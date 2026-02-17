@@ -1,185 +1,149 @@
 import os
+import sys
+from pathlib import Path
+
+# Add project root to path to resolve import conflicts
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
 import yaml
-import threading
-import subprocess
-import json
 import logging
-import time
 import random
+import time
 from concurrent.futures import ThreadPoolExecutor
-from slack_bolt import App
-from slack_bolt.adapter.socket_mode import SocketModeHandler
+
 from dotenv import load_dotenv
+
+from src.slack.app_manager import SlackAppManager
+from src.slack.messaging import SlackMessaging
+from src.claude.cli_wrapper import ClaudeCLIWrapper, ClaudeCLIError
+from src.claude.prompt_builder import PromptBuilder
+from src.sessions.manager import SessionManager
+
 
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    datefmt='%Y-%m-%d %H:%M:%S'
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S"
 )
 logger = logging.getLogger(__name__)
 
 
 class MultiRepoBot:
-    def __init__(self, config_path):
+    """Orchestrates multiple Slack bots for repository assistance."""
+
+    def __init__(self, config_path: str) -> None:
+        """Initialize bot from configuration file.
+
+        Args:
+            config_path: Path to bot_config.yaml
+        """
         load_dotenv()
         self.config = yaml.safe_load(open(config_path))
         self.executor = ThreadPoolExecutor(max_workers=10)
-        self.apps = {}
-        self.handlers = {}
-        self.thread_sessions = {}  # Maps thread_ts -> Claude session_id
+        self.app_manager = SlackAppManager(self.config)
+        self.thread_sessions = SessionManager()
         self._setup_bots()
 
-    def _setup_bots(self):
-        """Initialize each bot from config"""
-        for bot_name, bot_config in self.config['bots'].items():
-            # Load tokens from environment
-            bot_token_key = f"{bot_name.upper()}_BOT_TOKEN"
-            app_token_key = f"{bot_name.upper()}_APP_TOKEN"
+    def _setup_bots(self) -> None:
+        """Initialize each bot from config."""
+        for bot_name, bot_config in self.config["bots"].items():
+            handler = self._make_app_mention_handler(bot_name, bot_config)
+            self.app_manager.setup_bot(bot_name, bot_config, handler)
 
-            bot_token = os.getenv(bot_token_key)
-            app_token = os.getenv(app_token_key)
+    def _make_app_mention_handler(self, bot_name: str, bot_config: dict):
+        """Create a handler closure with bot_name and bot_config in scope.
 
-            if not bot_token or not app_token:
-                logger.warning(f"Missing tokens for {bot_name}, skipping...")
-                continue
+        Args:
+            bot_name: Bot name from config
+            bot_config: Bot-specific configuration
 
-            # Create Slack App instance
-            app = App(token=bot_token)
-
-            # Register event handler
-            app.event("app_mention")(self._make_app_mention_handler(bot_name, bot_config))
-
-            self.apps[bot_name] = {
-                'app': app,
-                'config': bot_config
-            }
-
-            logger.info(f"Configured bot: {bot_name} (repo: {bot_config['repo_path']})")
-
-    def _make_app_mention_handler(self, bot_name, bot_config):
-        """Create a handler closure with bot_name and bot_config in scope"""
+        Returns:
+            Event handler function
+        """
         def handler(event, say, client):
-            thread_ts = event.get('thread_ts') or event['ts']
-            channel = event.get('channel')
+            thread_ts = event.get("thread_ts") or event["ts"]
+            channel = event.get("channel")
 
             logger.info(f"[{bot_name}] Request received - channel: {channel}, thread: {thread_ts}")
 
             # Randomly select and add one reaction to indicate we're working on it
-            emojis = bot_config.get('processing_emojis', ['hourglass_flowing_sand'])
+            emojis = bot_config.get("processing_emojis", ["hourglass_flowing_sand"])
             selected_emoji = random.choice(emojis)
 
-            try:
-                client.reactions_add(
-                    channel=channel,
-                    timestamp=event['ts'],
-                    name=selected_emoji
-                )
-                logger.debug(f"[{bot_name}] Added {selected_emoji} reaction to {event['ts']}")
-            except Exception as e:
-                logger.warning(f"[{bot_name}] Failed to add {selected_emoji} reaction: {e}")
+            messaging = SlackMessaging(self.app_manager.apps[bot_name]["app"])
+            messaging.add_reaction(channel, event["ts"], selected_emoji)
 
             # Submit job to executor for async processing
-            self.executor.submit(self.process_request, bot_name, event, say, client, selected_emoji)
+            self.executor.submit(
+                self.process_request,
+                bot_name,
+                event,
+                say,
+                client,
+                selected_emoji
+            )
 
         return handler
 
-    def fetch_thread_context(self, bot_app, channel, thread_ts):
-        """Fetch all messages in a thread"""
-        try:
-            result = bot_app.client.conversations_replies(
-                channel=channel,
-                ts=thread_ts
-            )
-            messages = result['messages']
-            logger.debug(f"Fetched {len(messages)} messages from thread {thread_ts}")
-            return messages
-        except Exception as e:
-            logger.error(f"Error fetching thread context: {e}")
-            return []
+    def process_request(
+        self,
+        bot_name: str,
+        event: dict,
+        say: callable,
+        client: any,
+        emoji: str
+    ) -> None:
+        """Process a Slack mention and respond using Claude Code.
 
-    def format_prompt(self, messages, repo_path):
-        """Format Slack thread history into a prompt for Claude"""
-        if len(messages) == 1:
-            # First message in thread - just return the question
-            return messages[0]['text']
-
-        # Build context from thread history
-        context = "Previous conversation:\n"
-        for msg in messages[:-1]:
-            role = "Assistant" if msg.get('bot_id') else "User"
-            context += f"{role}: {msg['text']}\n"
-
-        # Add current question
-        current_question = messages[-1]['text']
-        context += f"\nCurrent question: {current_question}\n"
-        context += f"\nYou are working in the repository at: {repo_path}"
-
-        return context
-
-    def process_request(self, bot_name, event, say, client, emoji):
-        """Process a Slack mention and respond using Claude Code"""
-        config = self.apps[bot_name]['config']
-        thread_ts = event.get('thread_ts') or event['ts']
-        channel = event['channel']
+        Args:
+            bot_name: Bot name
+            event: Slack event dict
+            say: Slack say function
+            client: Slack client
+            emoji: Selected emoji for cleanup
+        """
+        config = self.app_manager.apps[bot_name]["config"]
+        thread_ts = event.get("thread_ts") or event["ts"]
+        channel = event["channel"]
         start_time = time.time()
 
         logger.info(f"[{bot_name}] Processing request - thread: {thread_ts}")
 
+        messaging = SlackMessaging(self.app_manager.apps[bot_name]["app"])
+
         try:
             # Fetch thread context from Slack
-            messages = self.fetch_thread_context(
-                self.apps[bot_name]['app'],
-                channel,
-                thread_ts
-            )
+            messages = messaging.fetch_thread_context(channel, thread_ts)
 
             # Format prompt from thread history
             logger.info(f"[{bot_name}] Building prompt... message = {messages[-1]['text'][:50]}...")
-            prompt = self.format_prompt(messages, config['repo_path'])
+            prompt = PromptBuilder.build(messages, config["repo_path"])
 
             # Check if we have an existing session for this thread
-            session_id = self.thread_sessions.get(thread_ts)
+            session_id = self.thread_sessions.get_session(thread_ts)
 
             if session_id:
                 logger.info(f"[{bot_name}] Resuming session {session_id[:8]}...")
             else:
                 logger.info(f"[{bot_name}] Starting new session")
 
-            # Build Claude Code command
-            cmd = ['claude', '-p', prompt, '--output-format', 'json']
-
-            # Add max-turns if configured
-            max_turns = config.get('max_turns', 40)
-            cmd.extend(['--max-turns', str(max_turns)])
-
-            # Add allowed tools if configured
-            allowed_tools = config.get('allowed_tools', [])
-            if allowed_tools:
-                cmd.extend(['--allowed-tools', ','.join(allowed_tools)])
-
-            if session_id:
-                cmd.extend(['--resume', session_id])
-
-            # Run Claude Code
+            # Invoke Claude CLI
             claude_start = time.time()
-            result = subprocess.run(
-                cmd,
-                cwd=config['repo_path'],
-                capture_output=True,
-                text=True,
-                timeout=config['timeout']
+            claude = ClaudeCLIWrapper(
+                repo_path=config["repo_path"],
+                timeout=config["timeout"],
+                max_turns=config.get("max_turns", 40),
+                allowed_tools=config.get("allowed_tools", [])
             )
+            output = claude.invoke(prompt, session_id)
             claude_duration = time.time() - claude_start
 
-            # Parse JSON response
-            output = json.loads(result.stdout)
-
             # Store session_id for future turns in this thread
-            self.thread_sessions[thread_ts] = output['session_id']
+            self.thread_sessions.set_session(thread_ts, output["session_id"])
 
             # Calculate response length for logging
-            response_length = len(output['result'])
+            response_length = len(output["result"])
             total_duration = time.time() - start_time
 
             logger.info(
@@ -190,73 +154,28 @@ class MultiRepoBot:
                 f"Session: {output['session_id'][:8]}..."
             )
 
-            # Post response to Slack thread with mrkdwn formatting
-            say(
-                text=output['result'],
-                thread_ts=thread_ts,
-                blocks=[
-                    {
-                        "type": "section",
-                        "text": {
-                            "type": "mrkdwn",
-                            "text": output['result']
-                        }
-                    }
-                ]
-            )
+            # Post response to Slack thread
+            messaging.post_message(say, output["result"], thread_ts)
 
             # Remove the processing reaction
-            try:
-                self.apps[bot_name]['app'].client.reactions_remove(
-                    channel=channel,
-                    timestamp=event['ts'],
-                    name=emoji
-                )
-                logger.debug(f"[{bot_name}] Removed {emoji} reaction from {event['ts']}")
-            except Exception as e:
-                logger.warning(f"[{bot_name}] Failed to remove {emoji} reaction: {e}")
+            messaging.remove_reaction(channel, event["ts"], emoji)
 
-        except subprocess.TimeoutExpired:
+        except TimeoutError as e:
             logger.error(f"[{bot_name}] Request timed out after {config['timeout']}s")
             error_msg = "Request timed out - the task took too long to complete."
-            say(
-                text=error_msg,
-                thread_ts=thread_ts,
-                blocks=[{"type": "section", "text": {"type": "mrkdwn", "text": error_msg}}]
-            )
-        except json.JSONDecodeError as e:
-            logger.error(f"[{bot_name}] JSON decode error: {e}")
+            messaging.post_message(say, error_msg, thread_ts)
+        except ClaudeCLIError as e:
+            logger.error(f"[{bot_name}] Claude CLI error: {e}", exc_info=True)
             error_msg = f"Error parsing Claude response: {str(e)}"
-            say(
-                text=error_msg,
-                thread_ts=thread_ts,
-                blocks=[{"type": "section", "text": {"type": "mrkdwn", "text": error_msg}}]
-            )
+            messaging.post_message(say, error_msg, thread_ts)
         except Exception as e:
             logger.error(f"[{bot_name}] Unexpected error: {e}", exc_info=True)
             error_msg = f"Error processing request: {str(e)}"
-            say(
-                text=error_msg,
-                thread_ts=thread_ts,
-                blocks=[{"type": "section", "text": {"type": "mrkdwn", "text": error_msg}}]
-            )
+            messaging.post_message(say, error_msg, thread_ts)
 
-    def start(self):
-        """Start all bot handlers"""
-        threads = []
-        for bot_name, bot_data in self.apps.items():
-            app_token_key = f"{bot_name.upper()}_APP_TOKEN"
-            app_token = os.getenv(app_token_key)
-
-            handler = SocketModeHandler(bot_data['app'], app_token)
-
-            # Start handler in a separate thread
-            thread = threading.Thread(target=handler.start, daemon=True)
-            thread.start()
-            threads.append(thread)
-            logger.info(f"Started handler for: {bot_name}")
-
-        logger.info("All bots started, listening for mentions...")
+    def start(self) -> None:
+        """Start all bot handlers."""
+        threads = self.app_manager.start_handlers()
 
         # Keep main thread alive
         try:
@@ -264,4 +183,4 @@ class MultiRepoBot:
                 thread.join()
         except KeyboardInterrupt:
             logger.info("Shutting down...")
-            logger.info(f"Active sessions: {len(self.thread_sessions)}")
+            logger.info(f"Active sessions: {len(self.thread_sessions._sessions)}")

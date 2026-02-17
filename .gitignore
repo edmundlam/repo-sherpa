@@ -216,3 +216,7 @@ context/
 /repos/*
 !/repos/CLAUDE.md
 !/repos/REPOS.md.example
+
+
+# Claude
+.claude/settings.local.json

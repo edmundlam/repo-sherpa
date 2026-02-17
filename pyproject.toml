@@ -9,3 +9,12 @@ dependencies = [
     "pyyaml>=6.0.3",
     "slack-bolt>=1.27.0",
 ]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0.2",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]

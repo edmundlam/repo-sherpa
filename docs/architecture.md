@@ -16,7 +16,7 @@ graph TB
     end
 
     subgraph "repo-sherpa Service"
-        MB[MultiRepoBot]
+        MB[MultiRepoBot<br/>src/bot.py]
 
         subgraph "Bot Instance: backend"
             APP1[Slack App]
@@ -30,8 +30,15 @@ graph TB
             CFG2[Config: repo_path, timeout]
         end
 
+        subgraph "Domain Modules"
+            AM[SlackAppManager<br/>src/slack/app_manager.py]
+            SM[SlackMessaging<br/>src/slack/messaging.py]
+            CW[ClaudeCLIWrapper<br/>src/claude/cli_wrapper.py]
+            PB[PromptBuilder<br/>src/claude/prompt_builder.py]
+            SS[SessionManager<br/>src/sessions/manager.py]
+        end
+
         EXEC[ThreadPoolExecutor<br/>max_workers=10]
-        SESSIONS[(Thread Sessions Map)]
     end
 
     subgraph "External Dependencies"
@@ -46,12 +53,19 @@ graph TB
     APP2 --> H2
     H1 --> EXEC
     H2 --> EXEC
-    EXEC --> CLAUDE
+
+    MB --> AM
+    MB --> SS
+    EXEC --> CW
+    EXEC --> SM
+    CW --> PB
+    EXEC --> SS
+
+    CW --> CLAUDE
     CLAUDE --> REPO1
     CLAUDE --> REPO2
-    EXEC --> SESSIONS
-    MB --> APP1
-    MB --> APP2
+    SM --> APP1
+    SM --> APP2
 ```
 
 ## Request Flow
@@ -102,34 +116,87 @@ sequenceDiagram
 
 ## Core Components
 
+### Module Organization
+
+The codebase is organized into domain modules for clear separation of concerns:
+
+```
+src/
+├── bot.py              # MultiRepoBot orchestrator
+├── main.py             # Entry point
+├── slack/              # Slack integration layer
+│   ├── app_manager.py  # SlackAppManager - app lifecycle
+│   └── messaging.py    # SlackMessaging - API wrapper
+├── claude/             # Claude CLI integration
+│   ├── cli_wrapper.py  # ClaudeCLIWrapper - subprocess calls
+│   └── prompt_builder.py # PromptBuilder - formatting
+└── sessions/           # Session management
+    └── manager.py      # SessionManager - thread mapping
+```
+
 ### MultiRepoBot Class
 
-Located in `src/bot.py:23`, this is the central orchestrator.
+Located in `src/bot.py:32`, this is the central orchestrator.
 
 ```mermaid
 classDiagram
     class MultiRepoBot {
         -dict config
         -ThreadPoolExecutor executor
-        -dict apps
-        -dict handlers
-        -dict thread_sessions
+        -SlackAppManager app_manager
+        -SessionManager thread_sessions
         +__init__(config_path)
         -_setup_bots()
         -_make_app_mention_handler(bot_name, bot_config)
-        +fetch_thread_context(bot_app, channel, thread_ts)
         +process_request(bot_name, event, say, client, emoji)
-        +format_prompt(bot_config, messages)
         +start()
     }
+
+    class SlackAppManager {
+        -dict config
+        -dict apps
+        +setup_bot(bot_name, bot_config, handler)
+        +start_handlers()
+    }
+
+    class SlackMessaging {
+        -app
+        +add_reaction(channel, ts, emoji)
+        +remove_reaction(channel, ts, emoji)
+        +fetch_thread_context(channel, thread_ts)
+        +post_message(say, text, thread_ts)
+    }
+
+    class ClaudeCLIWrapper {
+        -str repo_path
+        -int timeout
+        -str max_turns
+        -list allowed_tools
+        +invoke(prompt, session_id)
+    }
+
+    class PromptBuilder {
+        +build(messages, repo_path)
+    }
+
+    class SessionManager {
+        -dict _sessions
+        +get_session(thread_ts)
+        +set_session(thread_ts, session_id)
+    }
+
+    MultiRepoBot --> SlackAppManager
+    MultiRepoBot --> SlackMessaging
+    MultiRepoBot --> ClaudeCLIWrapper
+    MultiRepoBot --> SessionManager
+    ClaudeCLIWrapper --> PromptBuilder
 ```
 
 **Key Attributes:**
 
-- `thread_sessions`: Maps `thread_ts` → `session_id` for conversation continuity
 - `executor`: ThreadPoolExecutor with max_workers=10 for concurrent processing
-- `apps`: Dict of bot_name → `{app, config}` pairs
-- `handlers`: Event handler closures (one per bot)
+- `app_manager`: SlackAppManager instance for bot lifecycle management
+- `thread_sessions`: SessionManager instance for conversation continuity
 
 ### Session Management
 
@@ -201,7 +268,7 @@ graph TB
 
 ### Prompt Formatting
 
-The `format_prompt()` method builds the conversation context:
+The `PromptBuilder.build()` method builds the conversation context:
 
 ```mermaid
 graph LR
