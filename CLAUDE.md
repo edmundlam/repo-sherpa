@@ -21,6 +21,16 @@ make run
 # or
 uv run python src/main.py
 
+# Run tests
+make test
+# or
+uv run pytest
+
+# Run linter and formatter (auto-fixes issues)
+make lint
+# or
+uv run ruff check --fix && uv run ruff format
+
 # Clean virtual environment
 make clean
 ```
