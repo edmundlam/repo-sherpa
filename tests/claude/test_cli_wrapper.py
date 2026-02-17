@@ -1,32 +1,33 @@
-import subprocess
 import json
+import subprocess
 from unittest.mock import Mock, patch
+
 import pytest
-from src.claude.cli_wrapper import ClaudeCLIWrapper, ClaudeCLIError
+
+from src.claude.cli_wrapper import ClaudeCLIError, ClaudeCLIWrapper
 
 
 def test_cli_wrapper_command_construction():
     wrapper = ClaudeCLIWrapper(
-        repo_path="/path/to/repo",
-        timeout=300,
-        max_turns=40,
-        allowed_tools=["Read", "Grep"]
+        repo_path="/path/to/repo", timeout=300, max_turns=40, allowed_tools=["Read", "Grep"]
     )
     cmd = wrapper._build_command("test prompt", None)
     assert cmd == [
-        "claude", "-p", "test prompt",
-        "--output-format", "json",
-        "--max-turns", "40",
-        "--allowed-tools", "Read,Grep"
+        "claude",
+        "-p",
+        "test prompt",
+        "--output-format",
+        "json",
+        "--max-turns",
+        "40",
+        "--allowed-tools",
+        "Read,Grep",
     ]
 
 
 def test_cli_wrapper_with_session_resume():
     wrapper = ClaudeCLIWrapper(
-        repo_path="/path/to/repo",
-        timeout=300,
-        max_turns=40,
-        allowed_tools=[]
+        repo_path="/path/to/repo", timeout=300, max_turns=40, allowed_tools=[]
     )
     cmd = wrapper._build_command("test prompt", "session_123")
     assert "--resume" in cmd

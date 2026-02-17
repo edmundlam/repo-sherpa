@@ -1,8 +1,8 @@
 """Slack messaging and reaction utilities."""
 
 import logging
-from slack_bolt import App
 
+from slack_bolt import App
 
 logger = logging.getLogger(__name__)
 
@@ -31,11 +31,7 @@ class SlackMessaging:
             True if successful, False otherwise
         """
         try:
-            self.client.reactions_add(
-                channel=channel,
-                timestamp=timestamp,
-                name=emoji
-            )
+            self.client.reactions_add(channel=channel, timestamp=timestamp, name=emoji)
             logger.info(f"Added {emoji} reaction to {timestamp}")
             return True
         except Exception as e:
@@ -54,11 +50,7 @@ class SlackMessaging:
             True if successful, False otherwise
         """
         try:
-            self.client.reactions_remove(
-                channel=channel,
-                timestamp=timestamp,
-                name=emoji
-            )
+            self.client.reactions_remove(channel=channel, timestamp=timestamp, name=emoji)
             logger.info(f"Removed {emoji} reaction from {timestamp}")
             return True
         except Exception as e:
@@ -76,15 +68,7 @@ class SlackMessaging:
         say(
             text=text,
             thread_ts=thread_ts,
-            blocks=[
-                {
-                    "type": "section",
-                    "text": {
-                        "type": "mrkdwn",
-                        "text": text
-                    }
-                }
-            ]
+            blocks=[{"type": "section", "text": {"type": "mrkdwn", "text": text}}],
         )
 
     def fetch_thread_context(self, channel: str, thread_ts: str) -> list[dict]:
@@ -98,10 +82,7 @@ class SlackMessaging:
             List of message dicts, empty list on error
         """
         try:
-            result = self.client.conversations_replies(
-                channel=channel,
-                ts=thread_ts
-            )
+            result = self.client.conversations_replies(channel=channel, ts=thread_ts)
             messages = result["messages"]
             logger.debug(f"Fetched {len(messages)} messages from thread {thread_ts}")
             return messages

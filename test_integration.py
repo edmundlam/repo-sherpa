@@ -1,17 +1,18 @@
 #!/usr/bin/env python3
 """Integration test script to verify bot initialization."""
 
-import sys
 import logging
+import sys
 
 # Configure logging to see all output
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S"
+    datefmt="%Y-%m-%d %H:%M:%S",
 )
 
 logger = logging.getLogger(__name__)
+
 
 def test_imports():
     """Test that all modules can be imported."""
@@ -19,6 +20,7 @@ def test_imports():
 
     try:
         from src.bot import MultiRepoBot
+
         logger.info("✓ MultiRepoBot imported successfully")
     except ImportError as e:
         logger.error(f"✗ Failed to import MultiRepoBot: {e}")
@@ -26,6 +28,7 @@ def test_imports():
 
     try:
         from src.slack.app_manager import SlackAppManager
+
         logger.info("✓ SlackAppManager imported successfully")
     except ImportError as e:
         logger.error(f"✗ Failed to import SlackAppManager: {e}")
@@ -33,6 +36,7 @@ def test_imports():
 
     try:
         from src.slack.messaging import SlackMessaging
+
         logger.info("✓ SlackMessaging imported successfully")
     except ImportError as e:
         logger.error(f"✗ Failed to import SlackMessaging: {e}")
@@ -40,6 +44,7 @@ def test_imports():
 
     try:
         from src.claude.cli_wrapper import ClaudeCLIWrapper
+
         logger.info("✓ ClaudeCLIWrapper imported successfully")
     except ImportError as e:
         logger.error(f"✗ Failed to import ClaudeCLIWrapper: {e}")
@@ -47,6 +52,7 @@ def test_imports():
 
     try:
         from src.claude.prompt_builder import PromptBuilder
+
         logger.info("✓ PromptBuilder imported successfully")
     except ImportError as e:
         logger.error(f"✗ Failed to import PromptBuilder: {e}")
@@ -54,12 +60,14 @@ def test_imports():
 
     try:
         from src.sessions.manager import SessionManager
+
         logger.info("✓ SessionManager imported successfully")
     except ImportError as e:
         logger.error(f"✗ Failed to import SessionManager: {e}")
         return False
 
     return True
+
 
 def test_config_loading():
     """Test that configuration can be loaded."""
@@ -74,22 +82,24 @@ def test_config_loading():
         logger.info("✓ Environment variables loaded")
 
         # Load config
-        with open('bot_config.yaml') as f:
+        with open("bot_config.yaml") as f:
             config = yaml.safe_load(f)
 
-        logger.info(f"✓ Configuration loaded successfully")
+        logger.info("✓ Configuration loaded successfully")
         logger.info(f"  - Bots configured: {list(config['bots'].keys())}")
 
-        for bot_name, bot_config in config['bots'].items():
+        for bot_name, bot_config in config["bots"].items():
             logger.info(f"  - {bot_name}:")
             logger.info(f"      repo_path: {bot_config['repo_path']}")
             logger.info(f"      timeout: {bot_config['timeout']}")
             logger.info(f"      max_turns: {bot_config.get('max_turns', 'default')}")
             logger.info(f"      allowed_tools: {len(bot_config.get('allowed_tools', []))} tools")
-            logger.info(f"      processing_emojis: {bot_config.get('processing_emojis', ['default'])}")
+            logger.info(
+                f"      processing_emojis: {bot_config.get('processing_emojis', ['default'])}"
+            )
 
         # Check for tokens
-        for bot_name in config['bots'].keys():
+        for bot_name in config["bots"].keys():
             bot_token_key = f"{bot_name.upper()}_BOT_TOKEN"
             app_token_key = f"{bot_name.upper()}_APP_TOKEN"
 
@@ -107,6 +117,7 @@ def test_config_loading():
         logger.error(f"✗ Failed to load configuration: {e}")
         return False
 
+
 def test_bot_initialization():
     """Test that MultiRepoBot can be instantiated."""
     logger.info("\nTesting bot initialization...")
@@ -114,7 +125,7 @@ def test_bot_initialization():
     try:
         from src.bot import MultiRepoBot
 
-        bot = MultiRepoBot('bot_config.yaml')
+        bot = MultiRepoBot("bot_config.yaml")
         logger.info("✓ MultiRepoBot instantiated successfully")
         logger.info(f"  - Executor configured: {bot.executor is not None}")
         logger.info(f"  - App manager initialized: {bot.app_manager is not None}")
@@ -126,16 +137,18 @@ def test_bot_initialization():
     except Exception as e:
         logger.error(f"✗ Failed to initialize MultiRepoBot: {e}")
         import traceback
+
         traceback.print_exc()
         return False
+
 
 def test_component_integration():
     """Test that components work together."""
     logger.info("\nTesting component integration...")
 
     try:
-        from src.sessions.manager import SessionManager
         from src.claude.prompt_builder import PromptBuilder
+        from src.sessions.manager import SessionManager
 
         # Test SessionManager
         session_mgr = SessionManager()
@@ -154,7 +167,7 @@ def test_component_integration():
         # Test PromptBuilder
         test_messages = [
             {"text": "Hello", "user": "U123"},
-            {"text": "How are you?", "user": "U456"}
+            {"text": "How are you?", "user": "U456"},
         ]
         test_repo = "/path/to/repo"
 
@@ -171,14 +184,16 @@ def test_component_integration():
     except Exception as e:
         logger.error(f"✗ Component integration test failed: {e}")
         import traceback
+
         traceback.print_exc()
         return False
 
+
 def main():
     """Run all integration tests."""
-    logger.info("="*60)
+    logger.info("=" * 60)
     logger.info("REPO-SHERPA INTEGRATION TEST")
-    logger.info("="*60)
+    logger.info("=" * 60)
 
     tests = [
         ("Import Test", test_imports),
@@ -196,9 +211,9 @@ def main():
             results[test_name] = False
 
     # Print summary
-    logger.info("\n" + "="*60)
+    logger.info("\n" + "=" * 60)
     logger.info("TEST SUMMARY")
-    logger.info("="*60)
+    logger.info("=" * 60)
 
     all_passed = True
     for test_name, passed in results.items():
@@ -207,7 +222,7 @@ def main():
         if not passed:
             all_passed = False
 
-    logger.info("="*60)
+    logger.info("=" * 60)
 
     if all_passed:
         logger.info("\n✓ All integration tests passed!")
@@ -223,6 +238,8 @@ def main():
         logger.error("\n✗ Some tests failed. Please fix the issues above.")
         return 1
 
+
 if __name__ == "__main__":
     import os
+
     sys.exit(main())

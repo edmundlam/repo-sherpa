@@ -1,30 +1,28 @@
-import os
 import sys
 from pathlib import Path
 
 # Add project root to path to resolve import conflicts
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-import yaml
 import logging
 import random
 import time
 from concurrent.futures import ThreadPoolExecutor
 
+import yaml
 from dotenv import load_dotenv
 
-from src.slack.app_manager import SlackAppManager
-from src.slack.messaging import SlackMessaging
-from src.claude.cli_wrapper import ClaudeCLIWrapper, ClaudeCLIError
+from src.claude.cli_wrapper import ClaudeCLIError, ClaudeCLIWrapper
 from src.claude.prompt_builder import PromptBuilder
 from src.sessions.manager import SessionManager
-
+from src.slack.app_manager import SlackAppManager
+from src.slack.messaging import SlackMessaging
 
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S"
+    datefmt="%Y-%m-%d %H:%M:%S",
 )
 logger = logging.getLogger(__name__)
 
@@ -61,6 +59,7 @@ class MultiRepoBot:
         Returns:
             Event handler function
         """
+
         def handler(event, say, client):
             thread_ts = event.get("thread_ts") or event["ts"]
             channel = event.get("channel")
@@ -75,24 +74,12 @@ class MultiRepoBot:
             messaging.add_reaction(channel, event["ts"], selected_emoji)
 
             # Submit job to executor for async processing
-            self.executor.submit(
-                self.process_request,
-                bot_name,
-                event,
-                say,
-                client,
-                selected_emoji
-            )
+            self.executor.submit(self.process_request, bot_name, event, say, client, selected_emoji)
 
         return handler
 
     def process_request(
-        self,
-        bot_name: str,
-        event: dict,
-        say: callable,
-        client: any,
-        emoji: str
+        self, bot_name: str, event: dict, say: callable, client: any, emoji: str
     ) -> None:
         """Process a Slack mention and respond using Claude Code.
 
@@ -134,7 +121,7 @@ class MultiRepoBot:
                 repo_path=config["repo_path"],
                 timeout=config["timeout"],
                 max_turns=config.get("max_turns", 40),
-                allowed_tools=config.get("allowed_tools", [])
+                allowed_tools=config.get("allowed_tools", []),
             )
             output = claude.invoke(prompt, session_id)
             claude_duration = time.time() - claude_start
@@ -160,7 +147,7 @@ class MultiRepoBot:
             # Remove the processing reaction
             messaging.remove_reaction(channel, event["ts"], emoji)
 
-        except TimeoutError as e:
+        except TimeoutError:
             logger.error(f"[{bot_name}] Request timed out after {config['timeout']}s")
             error_msg = "Request timed out - the task took too long to complete."
             messaging.post_message(say, error_msg, thread_ts)

@@ -1,5 +1,5 @@
-from unittest.mock import Mock, MagicMock
-import pytest
+from unittest.mock import MagicMock, Mock
+
 from src.slack.messaging import SlackMessaging
 
 
@@ -11,9 +11,7 @@ def test_add_reaction_success():
     result = messaging.add_reaction("C123", "123.456", "eyes")
     assert result is True
     mock_app.client.reactions_add.assert_called_once_with(
-        channel="C123",
-        timestamp="123.456",
-        name="eyes"
+        channel="C123", timestamp="123.456", name="eyes"
     )
 
 
@@ -34,9 +32,7 @@ def test_remove_reaction_success():
     result = messaging.remove_reaction("C123", "123.456", "eyes")
     assert result is True
     mock_app.client.reactions_remove.assert_called_once_with(
-        channel="C123",
-        timestamp="123.456",
-        name="eyes"
+        channel="C123", timestamp="123.456", name="eyes"
     )
 
 
@@ -64,10 +60,7 @@ def test_fetch_thread_context():
     messages = messaging.fetch_thread_context("C123", "123.456")
 
     assert len(messages) == 2
-    mock_app.client.conversations_replies.assert_called_once_with(
-        channel="C123",
-        ts="123.456"
-    )
+    mock_app.client.conversations_replies.assert_called_once_with(channel="C123", ts="123.456")
 
 
 def test_fetch_thread_context_error():

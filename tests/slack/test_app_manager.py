@@ -1,36 +1,27 @@
 import os
-from unittest.mock import Mock, patch, MagicMock
-import pytest
+from unittest.mock import Mock, patch
+
 from src.slack.app_manager import SlackAppManager
 
 
 def test_app_manager_initialization():
-    config = {
-        "backend": {
-            "repo_path": "/path/to/repo",
-            "timeout": 300
-        }
-    }
+    config = {"backend": {"repo_path": "/path/to/repo", "timeout": 300}}
     manager = SlackAppManager(config)
     assert manager.config == config
     assert manager.apps == {}
 
 
 def test_setup_bot_creates_app():
-    config = {
-        "backend": {
-            "repo_path": "/path/to/repo",
-            "timeout": 300
-        }
-    }
+    config = {"backend": {"repo_path": "/path/to/repo", "timeout": 300}}
     manager = SlackAppManager(config)
 
     mock_handler = Mock()
-    with patch.dict(os.environ, {"BACKEND_BOT_TOKEN": "xoxb-test", "BACKEND_APP_TOKEN": "xapp-test"}):
-        with patch("src.slack.app_manager.App") as mock_app_class:
-            mock_app_instance = Mock()
-            mock_app_class.return_value = mock_app_instance
-            app = manager.setup_bot("backend", config["backend"], mock_handler)
+    with patch.dict(
+        os.environ, {"BACKEND_BOT_TOKEN": "xoxb-test", "BACKEND_APP_TOKEN": "xapp-test"}
+    ), patch("src.slack.app_manager.App") as mock_app_class:
+        mock_app_instance = Mock()
+        mock_app_class.return_value = mock_app_instance
+        app = manager.setup_bot("backend", config["backend"], mock_handler)
 
     assert "backend" in manager.apps
     assert manager.apps["backend"]["app"] == mock_app_instance

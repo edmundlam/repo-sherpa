@@ -1,4 +1,4 @@
-.PHONY: install run test clean help
+.PHONY: install run test lint clean help
 
 install:
 	uv sync
@@ -9,6 +9,10 @@ run:
 test:
 	uv run pytest
 
+lint:
+	uv run ruff check --fix
+	uv run ruff format
+
 clean:
 	rm -rf .venv
 
@@ -17,5 +21,6 @@ help:
 	@echo "  install  - Install dependencies and create virtual environment"
 	@echo "  run      - Run the bot"
 	@echo "  test     - Run all tests"
+	@echo "  lint     - Run linter and format checker"
 	@echo "  clean    - Remove virtual environment"
 	@echo "  help     - Show this help message"

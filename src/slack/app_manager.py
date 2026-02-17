@@ -3,9 +3,9 @@
 import logging
 import os
 import threading
+
 from slack_bolt import App
 from slack_bolt.adapter.socket_mode import SocketModeHandler
-
 
 logger = logging.getLogger(__name__)
 
@@ -50,10 +50,7 @@ class SlackAppManager:
         # Register event handler
         app.event("app_mention")(handler)
 
-        self.apps[bot_name] = {
-            "app": app,
-            "config": bot_config
-        }
+        self.apps[bot_name] = {"app": app, "config": bot_config}
 
         logger.info(f"Configured bot: {bot_name} (repo: {bot_config['repo_path']})")
         return app

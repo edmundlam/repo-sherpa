@@ -4,12 +4,12 @@ import json
 import logging
 import subprocess
 
-
 logger = logging.getLogger(__name__)
 
 
 class ClaudeCLIError(Exception):
     """Raised when Claude CLI invocation fails."""
+
     pass
 
 
@@ -17,11 +17,7 @@ class ClaudeCLIWrapper:
     """Wraps Claude Code CLI subprocess execution."""
 
     def __init__(
-        self,
-        repo_path: str,
-        timeout: int,
-        max_turns: int,
-        allowed_tools: list[str]
+        self, repo_path: str, timeout: int, max_turns: int, allowed_tools: list[str]
     ) -> None:
         """Initialize CLI wrapper.
 
@@ -74,11 +70,7 @@ class ClaudeCLIWrapper:
         cmd = self._build_command(prompt, session_id)
 
         result = subprocess.run(
-            cmd,
-            cwd=self.repo_path,
-            capture_output=True,
-            text=True,
-            timeout=self.timeout
+            cmd, cwd=self.repo_path, capture_output=True, text=True, timeout=self.timeout
         )
 
         try:
@@ -91,8 +83,8 @@ class ClaudeCLIWrapper:
                 extra={
                     "stdout": result.stdout,
                     "stderr": result.stderr,
-                    "returncode": result.returncode
-                }
+                    "returncode": result.returncode,
+                },
             )
             logger.error(f"STDOUT: {result.stdout}")
             logger.error(f"STDERR: {result.stderr}")

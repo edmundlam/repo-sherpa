@@ -1,4 +1,3 @@
-import pytest
 from src.sessions.manager import SessionManager
 
 
