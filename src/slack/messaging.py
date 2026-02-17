@@ -36,7 +36,7 @@ class SlackMessaging:
                 timestamp=timestamp,
                 name=emoji
             )
-            logger.debug(f"Added {emoji} reaction to {timestamp}")
+            logger.info(f"Added {emoji} reaction to {timestamp}")
             return True
         except Exception as e:
             logger.warning(f"Failed to add {emoji} reaction: {e}")
@@ -59,7 +59,7 @@ class SlackMessaging:
                 timestamp=timestamp,
                 name=emoji
             )
-            logger.debug(f"Removed {emoji} reaction from {timestamp}")
+            logger.info(f"Removed {emoji} reaction from {timestamp}")
             return True
         except Exception as e:
             logger.warning(f"Failed to remove {emoji} reaction: {e}")
