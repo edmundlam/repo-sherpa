@@ -143,21 +143,24 @@ class MultiRepoBot:
             # Post response to Slack thread
             messaging.post_message(say, output["result"], thread_ts)
 
-            # Remove the processing reaction
-            messaging.remove_reaction(channel, event["ts"], emoji)
+            # Add success reaction
+            messaging.add_reaction(channel, event["ts"], "white_check_mark")
 
         except TimeoutError:
             logger.error(f"[{bot_name}] Request timed out after {config['timeout']}s")
             error_msg = "Request timed out - the task took too long to complete."
             messaging.post_message(say, error_msg, thread_ts)
+            messaging.add_reaction(channel, event["ts"], "x")
         except ClaudeCLIError as e:
             logger.error(f"[{bot_name}] Claude CLI error: {e}", exc_info=True)
             error_msg = f"Error parsing Claude response: {str(e)}"
             messaging.post_message(say, error_msg, thread_ts)
+            messaging.add_reaction(channel, event["ts"], "x")
         except Exception as e:
             logger.error(f"[{bot_name}] Unexpected error: {e}", exc_info=True)
             error_msg = f"Error processing request: {str(e)}"
             messaging.post_message(say, error_msg, thread_ts)
+            messaging.add_reaction(channel, event["ts"], "x")
 
     def start(self) -> None:
         """Start all bot handlers."""
