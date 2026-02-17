@@ -31,7 +31,15 @@ make clean
 
 ### Multi-Bot System
 
-The application runs multiple independent bot instances from a single process, each configured in `bot_config.yaml`:
+The application runs multiple independent bot instances from a single process.
+The codebase is organized into domain modules:
+
+**`src/bot.py`**: MultiRepoBot orchestrator - coordinates components, manages ThreadPoolExecutor
+**`src/slack/`**: Slack integration (app setup, messaging, reactions)
+**`src/claude/`**: Claude CLI wrapper and prompt formatting
+**`src/sessions/`**: Thread session management
+
+Each bot instance is configured in `bot_config.yaml`:
 
 ```yaml
 bots:
@@ -71,12 +79,23 @@ Remove emoji reaction
 
 ### Key Components
 
-**`src/bot.py:23` - MultiRepoBot class**:
-- `thread_sessions` dict: Maps Slack thread_ts → Claude session_id for conversation continuity
+**`src/bot.py:32` - MultiRepoBot class**:
+- Orchestrates all components and coordinates request flow
 - `executor`: ThreadPoolExecutor (max_workers=10) for concurrent request handling
+- `app_manager`: SlackAppManager instance for bot lifecycle
+- `thread_sessions`: SessionManager instance for conversation continuity
 - `_make_app_mention_handler()`: Closure pattern captures bot-specific config per handler
-- `process_request()`: Main request processing logic with Claude CLI integration
-- `format_prompt()`: Builds conversation context from Slack thread history
+- `process_request()`: Main request processing logic
+
+**`src/slack/app_manager.py`**: SlackAppManager - handles Slack app setup and lifecycle
+
+**`src/slack/messaging.py`**: SlackMessaging - wraps Slack API calls (reactions, messages, thread context)
+
+**`src/claude/cli_wrapper.py`**: ClaudeCLIWrapper - invokes Claude Code CLI subprocess
+
+**`src/claude/prompt_builder.py`**: PromptBuilder - formats conversation history into prompts
+
+**`src/sessions/manager.py`**: SessionManager - maps thread_ts → session_id for multi-turn conversations
 
 **`src/main.py`**: Simple entry point that instantiates and starts MultiRepoBot
 
