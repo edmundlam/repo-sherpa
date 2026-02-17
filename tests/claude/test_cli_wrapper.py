@@ -8,9 +8,7 @@ from src.claude.cli_wrapper import ClaudeCLIError, ClaudeCLIWrapper
 
 
 def test_cli_wrapper_command_construction():
-    wrapper = ClaudeCLIWrapper(
-        repo_path="/path/to/repo", timeout=300, max_turns=40, allowed_tools=["Read", "Grep"]
-    )
+    wrapper = ClaudeCLIWrapper(repo_path="/path/to/repo", timeout=300, max_turns=40, allowed_tools=["Read", "Grep"])
     cmd = wrapper._build_command("test prompt", None)
     assert cmd == [
         "claude",
@@ -26,9 +24,7 @@ def test_cli_wrapper_command_construction():
 
 
 def test_cli_wrapper_with_session_resume():
-    wrapper = ClaudeCLIWrapper(
-        repo_path="/path/to/repo", timeout=300, max_turns=40, allowed_tools=[]
-    )
+    wrapper = ClaudeCLIWrapper(repo_path="/path/to/repo", timeout=300, max_turns=40, allowed_tools=[])
     cmd = wrapper._build_command("test prompt", "session_123")
     assert "--resume" in cmd
     assert "session_123" in cmd

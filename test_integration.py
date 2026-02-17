@@ -3,6 +3,7 @@
 
 import logging
 import sys
+from pathlib import Path
 
 # Configure logging to see all output
 logging.basicConfig(
@@ -82,7 +83,7 @@ def test_config_loading():
         logger.info("✓ Environment variables loaded")
 
         # Load config
-        with open("bot_config.yaml") as f:
+        with Path("bot_config.yaml").open() as f:
             config = yaml.safe_load(f)
 
         logger.info("✓ Configuration loaded successfully")
@@ -94,12 +95,10 @@ def test_config_loading():
             logger.info(f"      timeout: {bot_config['timeout']}")
             logger.info(f"      max_turns: {bot_config.get('max_turns', 'default')}")
             logger.info(f"      allowed_tools: {len(bot_config.get('allowed_tools', []))} tools")
-            logger.info(
-                f"      processing_emojis: {bot_config.get('processing_emojis', ['default'])}"
-            )
+            logger.info(f"      processing_emojis: {bot_config.get('processing_emojis', ['default'])}")
 
         # Check for tokens
-        for bot_name in config["bots"].keys():
+        for bot_name in config["bots"]:
             bot_token_key = f"{bot_name.upper()}_BOT_TOKEN"
             app_token_key = f"{bot_name.upper()}_APP_TOKEN"
 

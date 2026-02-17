@@ -37,7 +37,8 @@ class MultiRepoBot:
             config_path: Path to bot_config.yaml
         """
         load_dotenv()
-        self.config = yaml.safe_load(open(config_path))
+        with Path(config_path).open() as f:
+            self.config = yaml.safe_load(f)
         self.executor = ThreadPoolExecutor(max_workers=10)
         self.app_manager = SlackAppManager(self.config)
         self.thread_sessions = SessionManager()
@@ -78,9 +79,7 @@ class MultiRepoBot:
 
         return handler
 
-    def process_request(
-        self, bot_name: str, event: dict, say: callable, client: any, emoji: str
-    ) -> None:
+    def process_request(self, bot_name: str, event: dict, say: callable, client: any, emoji: str) -> None:
         """Process a Slack mention and respond using Claude Code.
 
         Args:

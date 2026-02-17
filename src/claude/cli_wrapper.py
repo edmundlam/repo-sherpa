@@ -16,9 +16,7 @@ class ClaudeCLIError(Exception):
 class ClaudeCLIWrapper:
     """Wraps Claude Code CLI subprocess execution."""
 
-    def __init__(
-        self, repo_path: str, timeout: int, max_turns: int, allowed_tools: list[str]
-    ) -> None:
+    def __init__(self, repo_path: str, timeout: int, max_turns: int, allowed_tools: list[str]) -> None:
         """Initialize CLI wrapper.
 
         Args:
@@ -69,9 +67,7 @@ class ClaudeCLIWrapper:
         """
         cmd = self._build_command(prompt, session_id)
 
-        result = subprocess.run(
-            cmd, cwd=self.repo_path, capture_output=True, text=True, timeout=self.timeout
-        )
+        result = subprocess.run(cmd, cwd=self.repo_path, capture_output=True, text=True, timeout=self.timeout)
 
         try:
             output = json.loads(result.stdout)

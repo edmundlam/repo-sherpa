@@ -10,9 +10,7 @@ def test_add_reaction_success():
 
     result = messaging.add_reaction("C123", "123.456", "eyes")
     assert result is True
-    mock_app.client.reactions_add.assert_called_once_with(
-        channel="C123", timestamp="123.456", name="eyes"
-    )
+    mock_app.client.reactions_add.assert_called_once_with(channel="C123", timestamp="123.456", name="eyes")
 
 
 def test_add_reaction_failure():
@@ -31,9 +29,7 @@ def test_remove_reaction_success():
 
     result = messaging.remove_reaction("C123", "123.456", "eyes")
     assert result is True
-    mock_app.client.reactions_remove.assert_called_once_with(
-        channel="C123", timestamp="123.456", name="eyes"
-    )
+    mock_app.client.reactions_remove.assert_called_once_with(channel="C123", timestamp="123.456", name="eyes")
 
 
 def test_post_message_calls_say():
@@ -52,9 +48,7 @@ def test_post_message_calls_say():
 
 def test_fetch_thread_context():
     mock_app = Mock()
-    mock_app.client.conversations_replies = MagicMock(
-        return_value={"messages": [{"text": "msg1"}, {"text": "msg2"}]}
-    )
+    mock_app.client.conversations_replies = MagicMock(return_value={"messages": [{"text": "msg1"}, {"text": "msg2"}]})
     messaging = SlackMessaging(mock_app)
 
     messages = messaging.fetch_thread_context("C123", "123.456")

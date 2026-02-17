@@ -16,9 +16,10 @@ def test_setup_bot_creates_app():
     manager = SlackAppManager(config)
 
     mock_handler = Mock()
-    with patch.dict(
-        os.environ, {"BACKEND_BOT_TOKEN": "xoxb-test", "BACKEND_APP_TOKEN": "xapp-test"}
-    ), patch("src.slack.app_manager.App") as mock_app_class:
+    with (
+        patch.dict(os.environ, {"BACKEND_BOT_TOKEN": "xoxb-test", "BACKEND_APP_TOKEN": "xapp-test"}),
+        patch("src.slack.app_manager.App") as mock_app_class,
+    ):
         mock_app_instance = Mock()
         mock_app_class.return_value = mock_app_instance
         app = manager.setup_bot("backend", config["backend"], mock_handler)
@@ -47,12 +48,14 @@ def test_start_handlers():
     mock_app = Mock()
     manager.apps["backend"] = {"app": mock_app, "config": config["backend"]}
 
-    with patch.dict(os.environ, {"BACKEND_APP_TOKEN": "xapp-test"}):
-        with patch("src.slack.app_manager.SocketModeHandler") as mock_handler_class:
-            with patch("threading.Thread") as mock_thread:
-                mock_thread_instance = Mock()
-                mock_thread.return_value = mock_thread_instance
-                threads = manager.start_handlers()
+    with (
+        patch.dict(os.environ, {"BACKEND_APP_TOKEN": "xapp-test"}),
+        patch("src.slack.app_manager.SocketModeHandler") as mock_handler_class,
+        patch("threading.Thread") as mock_thread,
+    ):
+        mock_thread_instance = Mock()
+        mock_thread.return_value = mock_thread_instance
+        threads = manager.start_handlers()
 
-                assert len(threads) == 1
-                mock_thread_instance.start.assert_called_once()
+        assert len(threads) == 1
+        mock_thread_instance.start.assert_called_once()
