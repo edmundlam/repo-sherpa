@@ -2,6 +2,7 @@
 
 install:
 	uv sync
+	uv run pre-commit install
 
 run:
 	uv run python src/main.py
